@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task List</title>
+<style>
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    max-width: 500px;
+    margin: 40px auto;
+    padding: 0 16px;
+    background: #f7f7f8;
+    color: #222;
+  }
+  h1 { text-align: center; }
+  form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  input[type="text"] {
+    flex: 1;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+  button {
+    padding: 10px 16px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+  }
+  button:hover { background: #1d4ed8; }
+  ul { list-style: none; padding: 0; }
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+  li span {
+    flex: 1;
+    word-break: break-word;
+  }
+  li.completed span {
+    text-decoration: line-through;
+    color: #999;
+  }
+  li button.delete {
+    background: #dc2626;
+    padding: 6px 10px;
+    font-size: 14px;
+  }
+  li button.delete:hover { background: #b91c1c; }
+  #empty {
+    text-align: center;
+    color: #888;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+<h1>Task List</h1>
+<form id="task-form">
+  <input type="text" id="task-input" placeholder="Add a new task..." autocomplete="off" required>
+  <button type="submit">Add</button>
+</form>
+<ul id="task-list"></ul>
+<p id="empty" hidden>No tasks yet. Add one above!</p>
+
+<script>
+  const form = document.getElementById('task-form');
+  const input = document.getElementById('task-input');
+  const list = document.getElementById('task-list');
+  const empty = document.getElementById('empty');
+
+  async function loadTasks() {
+    const res = await fetch('/api/tasks');
+    const tasks = await res.json();
+    renderTasks(tasks);
+  }
+
+  function renderTasks(tasks) {
+    list.innerHTML = '';
+    empty.hidden = tasks.length > 0;
+    for (const task of tasks) {
+      const li = document.createElement('li');
+      li.className = task.completed ? 'completed' : '';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = task.completed;
+      checkbox.addEventListener('change', () => toggleTask(task.id));
+
+      const span = document.createElement('span');
+      span.textContent = task.text;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'delete';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', () => deleteTask(task.id));
+
+      li.append(checkbox, span, deleteBtn);
+      list.appendChild(li);
+    }
+  }
+
+  async function addTask(text) {
+    await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    loadTasks();
+  }
+
+  async function toggleTask(id) {
+    await fetch(`/api/tasks/${id}`, { method: 'PATCH' });
+    loadTasks();
+  }
+
+  async function deleteTask(id) {
+    await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+    loadTasks();
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    addTask(text);
+  });
+
+  loadTasks();
+</script>
+</body>
+</html>
